@@ -9,6 +9,9 @@ use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::register_structs;
 use tock_registers::registers::{ReadOnly, ReadWrite, WriteOnly};
 
+use crate::GIC_CONFIG_BITS;
+use crate::SGI_RANGE;
+
 register_structs! {
     /// GIC Distributor registers.
     #[allow(non_snake_case)]
@@ -43,7 +46,13 @@ register_structs! {
         (0x0d00 => _reserved_1),
         /// Software Generated Interrupt Register.
         (0x0f00 => SGIR: WriteOnly<u32>),
-        (0x0f04 => @END),
+        (0x0f04 => reserve2),
+        /// Software Generated Interrupt Pending Registers.
+        (0x0f10 => CPENDSGIR: [ReadWrite<u32>; 0x4]),
+        /// Software Generated Interrupt Pending Registers.
+        (0x0f20 => SPENDSGIR: [ReadWrite<u32>; 0x4]),
+        (0x0f30 => _reserved_3),
+        (0x1000 => @END),
     }
 }
 
@@ -177,6 +186,144 @@ impl GicDistributor {
         }
     }
 
+    /// Check the given interrupt is Enable or disable.
+    pub fn get_enable(&mut self, vector: usize) -> bool {
+        let reg = vector / 32;
+        let mask = 1 << (vector % 32);
+        self.regs().ISENABLER[reg].get() & mask != 0
+    }
+
+    /// Set SGIR for sgi int id and target cpu.
+    pub fn set_sgi(&self, cpu_if: usize, sgi_num: usize) {
+        let int_id = (sgi_num & 0b1111) as u32;
+        let cpu_targetlist = 1 << (16 + cpu_if);
+        self.regs().SGIR.set(cpu_targetlist | int_id);
+    }
+
+    /// Send ipi to cpu.
+    pub fn send_sgi(&mut self, cpu_if: usize, sgi_num: usize) {
+        self.regs()
+            .SGIR
+            .set(((1 << (16 + cpu_if)) | (sgi_num & 0b1111)) as u32);
+    }
+
+    /// Get interrupt priority.
+    pub fn get_priority(&self, int_id: usize) -> usize {
+        let idx = (int_id * 8) / 32;
+        let off = (int_id * 8) % 32;
+        ((self.regs().IPRIORITYR[idx].get() >> off) & 0xff) as usize
+    }
+
+    /// Set interrupt priority.
+    pub fn set_priority(&mut self, int_id: usize, priority: u8) {
+        let idx = (int_id * 8) / 32;
+        let offset = (int_id * 8) % 32;
+        let mask: u32 = 0xff << offset;
+
+        let prev_reg_val = self.regs().IPRIORITYR[idx].get();
+        // clear target int_id priority and set its priority.
+        let reg_val = (prev_reg_val & !mask) | (((priority as u32) << offset) & mask);
+        self.regs().IPRIORITYR[idx].set(reg_val);
+    }
+
+    /// Get interrupt target cpu.
+    pub fn get_target_cpu(&self, int_id: usize) -> usize {
+        let idx = (int_id * 8) / 32;
+        let offset = (int_id * 8) % 32;
+        ((self.regs().ITARGETSR[idx].get() >> offset) & 0xff) as usize
+    }
+
+    /// Set interrupt target cpu.
+    pub fn set_target_cpu(&mut self, int_id: usize, target: u8) {
+        let idx = (int_id * 8) / 32;
+        let offset = (int_id * 8) % 32;
+        let mask: u32 = 0xff << offset;
+
+        let prev_reg_val = self.regs().ITARGETSR[idx].get();
+        // clear target int_id target and set its target.
+        let reg_val: u32 = (prev_reg_val & !mask) | (((target as u32) << offset) & mask);
+        self.regs().ITARGETSR[idx].set(reg_val);
+    }
+
+    /// Set interrupt state to pending or not.
+    pub fn set_pend(&self, int_id: usize, is_pend: bool, current_cpu_id: usize) {
+        if SGI_RANGE.contains(&int_id) {
+            let reg_idx = int_id / 4;
+            let offset = (int_id % 4) * 8;
+            if is_pend {
+                self.regs().SPENDSGIR[reg_idx].set(1 << (offset + current_cpu_id));
+            // get current cpu todo()
+            } else {
+                self.regs().CPENDSGIR[reg_idx].set(0xff << offset);
+            }
+        } else {
+            let reg_idx = int_id / 32;
+            let mask = 1 << int_id % 32;
+            if is_pend {
+                self.regs().ISPENDR[reg_idx].set(mask);
+            } else {
+                self.regs().ICPENDR[reg_idx].set(mask);
+            }
+        }
+    }
+
+    /// Set interrupt state to active or not.
+    pub fn set_active(&self, int_id: usize, is_active: bool) {
+        let reg_idx = int_id / 32;
+        let mask = 1 << int_id % 32;
+
+        if is_active {
+            self.regs().ISACTIVER[reg_idx].set(mask);
+        } else {
+            self.regs().ICACTIVER[reg_idx].set(mask);
+        }
+    }
+
+    /// Set interrupt state. Depend on its active state and pending state.
+    pub fn set_state(&self, int_id: usize, state: usize, current_cpu_id: usize) {
+        self.set_active(int_id, (state & 0b10) != 0);
+        self.set_pend(int_id, (state & 0b01) != 0, current_cpu_id);
+    }
+
+    /// Get interrupt state. Depend on its active state and pending state.
+    pub fn get_state(&self, int_id: usize) -> usize {
+        let reg_idx = int_id / 32;
+        let mask = 1 << int_id % 32;
+
+        let pend = if (self.regs().ISPENDR[reg_idx].get() & mask) != 0 {
+            0b01
+        } else {
+            0b00
+        };
+        let active = if (self.regs().ISACTIVER[reg_idx].get() & mask) != 0 {
+            0b10
+        } else {
+            0b00
+        };
+        return pend | active;
+    }
+
+    /// Provides information about the configuration of this Redistributor.
+    /// Get typer register.
+    pub fn get_typer(&self) -> u32 {
+        self.regs().TYPER.get()
+    }
+
+    /// Get iidr register.
+    pub fn get_iidr(&self) -> u32 {
+        self.regs().IIDR.get()
+    }
+
+    /// Determines whether the corresponding interrupt is edge-triggered or level-sensitive.
+    pub fn set_icfgr(&self, int_id: usize, cfg: u8) {
+        let reg_ind = (int_id * GIC_CONFIG_BITS) / 32;
+        let off = (int_id * GIC_CONFIG_BITS) % 32;
+        let mask = 0b11 << off;
+
+        let icfgr = self.regs().ICFGR[reg_ind].get();
+        self.regs().ICFGR[reg_ind].set((icfgr & !mask) | (((cfg as u32) << off) & mask));
+    }
+
     /// Initializes the GIC distributor.
     ///
     /// It disables all interrupts, sets the target of all SPIs to CPU 0,
@@ -221,6 +368,12 @@ impl GicCpuInterface {
         unsafe { self.base.as_ref() }
     }
 
+    /// When interrupt priority drop is separated from interrupt deactivation,
+    /// a write to this register deactivates the specified interrupt.
+    pub fn set_dir(&self, dir: u32) {
+        self.regs().DIR.set(dir);
+    }
+
     /// Returns the interrupt ID of the highest priority pending interrupt for
     /// the CPU interface. (read GICC_IAR)
     ///
@@ -237,6 +390,17 @@ impl GicCpuInterface {
     /// The value written must be the value returns from [`Self::iar`].
     pub fn eoi(&self, iar: u32) {
         self.regs().EOIR.set(iar);
+    }
+
+    /// Controls the CPU interface, including enabling of interrupt groups,
+    /// interrupt signal bypass, binary point registers used, and separation
+    /// of priority drop and interrupt deactivation.
+    /// Get or set CTLR.
+    pub fn get_ctlr(&self) -> u32 {
+        self.regs().CTLR.get()
+    }
+    pub fn set_ctlr(&self, ctlr: u32) {
+        self.regs().CTLR.set(ctlr);
     }
 
     /// handles the signaled interrupt.
@@ -268,7 +432,14 @@ impl GicCpuInterface {
     /// This function should be called only once.
     pub fn init(&self) {
         // enable GIC0
+        #[cfg(not(feature = "el2"))]
         self.regs().CTLR.set(1);
+        #[cfg(feature = "el2")]
+        {
+            // EOImodeNS, bit [9] Controls the behavior of Non-secure accesses to GICC_EOIR GICC_AEOIR, and GICC_DIR
+            // EnableGrp0, bit [0] Enables the signaling of Group 0 interrupts by the CPU interface to a target PE:
+            self.regs().CTLR.set(1 | 1 << 9);
+        }
         // unmask interrupts at all priority levels
         self.regs().PMR.set(0xff);
     }

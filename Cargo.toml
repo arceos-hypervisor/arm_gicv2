@@ -13,3 +13,6 @@ categories = ["embedded", "no-std", "hardware-support", "os"]
 
 [dependencies]
 tock-registers = "0.8"
+
+[feature]
+el2 = []
