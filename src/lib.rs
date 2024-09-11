@@ -7,7 +7,10 @@ use core::ops::Range;
 
 mod gic_v2;
 
-pub use gic_v2::{GicCpuInterface, GicDistributor};
+/// Since the implementation of `crate_interface` requires fully
+/// exporting `GicTrait`, otherwise `crate_interface` will not
+/// be able to recognize it.
+pub use gic_v2::{GicCpuInterface, GicDistributor, GicInterface, GicTrait};
 
 /// Interrupt ID 0-15 are used for SGIs (Software-generated interrupt).
 ///

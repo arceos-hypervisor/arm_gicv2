@@ -13,6 +13,7 @@ categories = ["embedded", "no-std", "hardware-support", "os"]
 
 [dependencies]
 tock-registers = "0.8"
+crate_interface = "0.1.3"
 
-[feature]
+[features]
 el2 = []

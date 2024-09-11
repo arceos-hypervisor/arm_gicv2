@@ -3,6 +3,7 @@
 //! The official documentation: <https://developer.arm.com/documentation/ihi0048/latest/>
 
 use core::ptr::NonNull;
+use crate_interface::call_interface;
 
 use crate::{TriggerMode, GIC_MAX_IRQ, SPI_RANGE};
 use tock_registers::interfaces::{Readable, Writeable};
@@ -395,10 +396,11 @@ impl GicCpuInterface {
     /// Controls the CPU interface, including enabling of interrupt groups,
     /// interrupt signal bypass, binary point registers used, and separation
     /// of priority drop and interrupt deactivation.
-    /// Get or set CTLR.
+    /// Get CTLR.
     pub fn get_ctlr(&self) -> u32 {
         self.regs().CTLR.get()
     }
+    /// Set CTLR.
     pub fn set_ctlr(&self, ctlr: u32) {
         self.regs().CTLR.set(ctlr);
     }
@@ -442,5 +444,94 @@ impl GicCpuInterface {
         }
         // unmask interrupts at all priority levels
         self.regs().PMR.set(0xff);
+    }
+}
+
+/// define the GicTrait by crate_interface
+#[crate_interface::def_interface]
+pub trait GicTrait {
+    /// Enables or disables the given interrupt.
+    fn set_enable(vector: usize, enable: bool);
+    /// Check the given interrupt is Enable or disable.
+    fn get_enable(vector: usize) -> bool;
+
+    /// Provides information about the configuration of this Redistributor.
+    fn get_typer() -> u32;
+    /// Get iidr register.
+    fn get_iidr() -> u32;
+
+    /// Set interrupt state. Depend on its active state and pending state.
+    fn set_state(int_id: usize, state: usize, current_cpu_id: usize);
+    /// Get interrupt state. Depend on its active state and pending state.
+    fn get_state(int_id: usize) -> usize;
+
+    /// Determines whether the corresponding interrupt is edge-triggered or level-sensitive.
+    fn set_icfgr(int_id: usize, cfg: u8);
+
+    /// Get interrupt target cpu.
+    fn get_target_cpu(int_id: usize) -> usize;
+    /// Set interrupt target cpu.
+    fn set_target_cpu(int_id: usize, target: u8);
+
+    /// Get interrupt priority.
+    fn get_priority(int_id: usize) -> usize;
+    /// Set interrupt priority.
+    fn set_priority(int_id: usize, priority: u8);
+}
+
+pub struct GicInterface {}
+
+/// Implementation of [`GicTrait`] by crate_interface::call_interface,
+/// to provide an easy-to-use interface to
+/// the vgic crate.
+impl GicInterface {
+    /// Enables or disables the given interrupt.
+    pub fn set_enable(vector: usize, enable: bool) {
+        call_interface!(GicTrait::set_enable(vector, enable));
+    }
+    /// Check the given interrupt is Enable or disable.
+    pub fn get_enable(vector: usize) -> bool {
+        call_interface!(GicTrait::get_enable(vector))
+    }
+
+    /// Provides information about the configuration of this Redistributor.
+    pub fn get_typer() -> u32 {
+        call_interface!(GicTrait::get_typer())
+    }
+    /// Get iidr register.
+    pub fn get_iidr() -> u32 {
+        call_interface!(GicTrait::get_iidr())
+    }
+
+    /// Set interrupt state. Depend on its active state and pending state.
+    pub fn set_state(int_id: usize, state: usize, current_cpu_id: usize) {
+        call_interface!(GicTrait::set_state(int_id, state, current_cpu_id));
+    }
+    /// Get interrupt state. Depend on its active state and pending state.
+    pub fn get_state(int_id: usize) -> usize {
+        call_interface!(GicTrait::get_state(int_id))
+    }
+
+    /// Determines whether the corresponding interrupt is edge-triggered or level-sensitive.
+    pub fn set_icfgr(int_id: usize, cfg: u8) {
+        call_interface!(GicTrait::set_icfgr(int_id, cfg));
+    }
+
+    /// Get interrupt target cpu.
+    pub fn get_target_cpu(int_id: usize) -> usize {
+        call_interface!(GicTrait::get_target_cpu(int_id))
+    }
+    /// Set interrupt target cpu.
+    pub fn set_target_cpu(int_id: usize, target: u8) {
+        call_interface!(GicTrait::set_target_cpu(int_id, target));
+    }
+
+    /// Get interrupt priority.
+    pub fn get_priority(int_id: usize) -> usize {
+        call_interface!(GicTrait::get_priority(int_id))
+    }
+    /// Set interrupt priority.
+    pub fn set_priority(int_id: usize, priority: u8) {
+        call_interface!(GicTrait::set_priority(int_id, priority));
     }
 }
