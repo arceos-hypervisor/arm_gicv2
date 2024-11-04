@@ -395,10 +395,14 @@ impl GicCpuInterface {
     /// Controls the CPU interface, including enabling of interrupt groups,
     /// interrupt signal bypass, binary point registers used, and separation
     /// of priority drop and interrupt deactivation.
-    /// Get or set CTLR.
+    /// Get CTLR.
     pub fn get_ctlr(&self) -> u32 {
         self.regs().CTLR.get()
     }
+    /// Controls the CPU interface, including enabling of interrupt groups,
+    /// interrupt signal bypass, binary point registers used, and separation
+    /// of priority drop and interrupt deactivation.
+    /// Set CTLR.
     pub fn set_ctlr(&self, ctlr: u32) {
         self.regs().CTLR.set(ctlr);
     }
