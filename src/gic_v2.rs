@@ -4,13 +4,16 @@
 
 use core::ptr::NonNull;
 
-use crate::{TriggerMode, GIC_MAX_IRQ, SPI_RANGE};
 use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::register_structs;
 use tock_registers::registers::{ReadOnly, ReadWrite, WriteOnly};
 
 use crate::GIC_CONFIG_BITS;
 use crate::SGI_RANGE;
+use crate::{TriggerMode, GICC_CTLR_EN_BIT, GICD_CTLR_EN_BIT, GIC_MAX_IRQ, SPI_RANGE};
+
+#[cfg(feature = "el2")]
+use crate::GICC_CTLR_EOIMODENS_BIT;
 
 register_structs! {
     /// GIC Distributor registers.
@@ -352,7 +355,9 @@ impl GicDistributor {
         }
 
         // enable GIC0
-        self.regs().CTLR.set(1);
+        self.regs()
+            .CTLR
+            .set(self.regs().CTLR.get() | GICD_CTLR_EN_BIT);
     }
 }
 
@@ -366,12 +371,6 @@ impl GicCpuInterface {
 
     const fn regs(&self) -> &GicCpuInterfaceRegs {
         unsafe { self.base.as_ref() }
-    }
-
-    /// When interrupt priority drop is separated from interrupt deactivation,
-    /// a write to this register deactivates the specified interrupt.
-    pub fn set_dir(&self, dir: u32) {
-        self.regs().DIR.set(dir);
     }
 
     /// Returns the interrupt ID of the highest priority pending interrupt for
@@ -388,8 +387,22 @@ impl GicCpuInterface {
     /// specified interrupt. (write GICC_EOIR)
     ///
     /// The value written must be the value returns from [`Self::iar`].
+    ///
+    /// Note: with "el2" enabled, `GICC_CTLR`'s `GICC_CTLR_EOIMODENS_BIT` is set, which means
+    /// the GICC_EOIR register has priority drop functionality only, to complete the processing
+    /// of the specified interrupt, `dir` should be called to deactivate the interrupt.
     pub fn eoi(&self, iar: u32) {
         self.regs().EOIR.set(iar);
+    }
+
+    /// Deactivate interrupt. (write GICC_DIR)
+    ///
+    /// When interrupt priority drop is separated from interrupt deactivation,
+    /// a write to this register deactivates the specified interrupt.
+    ///
+    /// The value written must be the value returns from [`Self::iar`].
+    pub fn dir(&self, iar: u32) {
+        self.regs().DIR.set(iar);
     }
 
     /// Controls the CPU interface, including enabling of interrupt groups,
@@ -424,6 +437,10 @@ impl GicCpuInterface {
         if vector < 1020 {
             handler(vector);
             self.eoi(iar);
+            #[cfg(feature = "el2")]
+            if self.regs().CTLR.get() & GICC_CTLR_EOIMODENS_BIT != 0 {
+                self.dir(iar);
+            }
         } else {
             // spurious
         }
@@ -436,14 +453,15 @@ impl GicCpuInterface {
     /// This function should be called only once.
     pub fn init(&self) {
         #[cfg(not(feature = "el2"))]
-        self.regs().CTLR.set(1);
+        self.regs().CTLR.set(GICC_CTLR_EN_BIT);
+
         #[cfg(feature = "el2")]
         {
-            // EOImodeNS, bit [9] Controls the behavior of Non-secure accesses to GICC_EOIR GICC_AEOIR, and GICC_DIR
-            // EnableGrp0, bit [0] Enables the signaling of Group 0 interrupts by the CPU interface to a target PE:
-            self.regs().CTLR.set(1 | 1 << 9);
+            self.regs()
+                .CTLR
+                .set(GICC_CTLR_EN_BIT | GICC_CTLR_EOIMODENS_BIT);
         }
         // unmask interrupts at all priority levels
-        self.regs().PMR.set(0xff);
+        self.regs().PMR.set(u32::MAX);
     }
 }

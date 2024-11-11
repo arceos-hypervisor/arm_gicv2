@@ -32,6 +32,27 @@ pub const GIC_MAX_IRQ: usize = 1024;
 /// Number of bits used to configure the trigger mode for each interrupt.
 pub const GIC_CONFIG_BITS: usize = 2;
 
+/// GICC_CTLR register bits.
+///     bit 0 EnableGrp0:
+/// Enable for the signaling of Group 0 interrupts by the CPU interface to the connected processor:
+/// * 0: Disable signaling of Group 0 interrupts.
+/// * 1: Enable signaling of Group 0 interrupts.
+pub const GICC_CTLR_EN_BIT: u32 = 0x1;
+
+/// GICC_CTLR register bits:
+///     bit 9 EOImodeNS:
+/// Controls the behavior of Non-secure accesses to the GICC_EOIR and GICC_DIR registers
+/// * 0: GICC_EOIR has both priority drop and deactivate interrupt functionality. Accesses to the GICC_DIR are unpredictable.
+/// * 1: GICC_EOIR has priority drop functionality only. The GICC_DIR register has deactivate interrupt functionality.
+pub const GICC_CTLR_EOIMODENS_BIT: u32 = 1 << 9;
+
+/// GICD_CTLR register bits:
+///    bit 0 EnableGrp0:
+/// Enable for the signaling of Group 0 interrupts by the Distributor to the connected processors:
+/// * 0: Disable signaling of Group 0 interrupts.
+/// * 1: Enable signaling of Group 0 interrupts.
+const GICD_CTLR_EN_BIT: u32 = 0x1;
+
 /// Interrupt trigger mode.
 pub enum TriggerMode {
     /// Edge-triggered.
