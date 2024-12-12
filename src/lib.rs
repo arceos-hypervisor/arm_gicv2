@@ -5,6 +5,8 @@
 
 use core::ops::Range;
 
+mod regs;
+
 mod gic_v2;
 
 pub use gic_v2::{GicCpuInterface, GicDistributor};

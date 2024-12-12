@@ -15,6 +15,8 @@ use crate::{TriggerMode, GICC_CTLR_EN_BIT, GICD_CTLR_EN_BIT, GIC_MAX_IRQ, SPI_RA
 #[cfg(feature = "el2")]
 use crate::GICC_CTLR_EOIMODENS_BIT;
 
+use crate::regs::{GicdSgirReg, GICD_SGIR};
+
 register_structs! {
     /// GIC Distributor registers.
     #[allow(non_snake_case)]
@@ -48,7 +50,7 @@ register_structs! {
         (0x0c00 => ICFGR: [ReadWrite<u32>; 0x40]),
         (0x0d00 => _reserved_1),
         /// Software Generated Interrupt Register.
-        (0x0f00 => SGIR: WriteOnly<u32>),
+        (0x0f00 => SGIR: GicdSgirReg),
         (0x0f04 => reserve2),
         /// Software Generated Interrupt Pending Registers.
         (0x0f10 => CPENDSGIR: [ReadWrite<u32>; 0x4]),
@@ -196,18 +198,28 @@ impl GicDistributor {
         self.regs().ISENABLER[reg].get() & mask != 0
     }
 
-    /// Set SGIR for sgi int id and target cpu.
-    pub fn set_sgi(&self, cpu_if: usize, sgi_num: usize) {
-        let int_id = (sgi_num & 0b1111) as u32;
-        let cpu_targetlist = 1 << (16 + cpu_if);
-        self.regs().SGIR.set(cpu_targetlist | int_id);
+    /// Send ipi to processor specified by `dest_cpu_id`.
+    pub fn send_sgi(&mut self, dest_cpu_id: usize, sgi_num: usize) {
+        self.regs().SGIR.write(
+            GICD_SGIR::TargetListFilter::ForwardToCPUTargetList
+                + GICD_SGIR::CPUTargetList.val(dest_cpu_id as _)
+                + GICD_SGIR::SGIINTID.val(sgi_num as _),
+        );
     }
 
-    /// Send ipi to cpu.
-    pub fn send_sgi(&mut self, cpu_if: usize, sgi_num: usize) {
-        self.regs()
-            .SGIR
-            .set(((1 << (16 + cpu_if)) | (sgi_num & 0b1111)) as u32);
+    /// Sends an IPI to every processor, excluding the current one.
+    pub fn send_sgi_all_except_self(&mut self, sgi_num: usize) {
+        self.regs().SGIR.write(
+            GICD_SGIR::TargetListFilter::ForwardToAllExceptRequester
+                + GICD_SGIR::SGIINTID.val(sgi_num as _),
+        );
+    }
+
+    /// Sends an IPI to the current processor.
+    pub fn send_sgi_to_self(&mut self, sgi_num: usize) {
+        self.regs().SGIR.write(
+            GICD_SGIR::TargetListFilter::ForwardToRequester + GICD_SGIR::SGIINTID.val(sgi_num as _),
+        );
     }
 
     /// Get interrupt priority.
@@ -261,7 +273,7 @@ impl GicDistributor {
             }
         } else {
             let reg_idx = int_id / 32;
-            let mask = 1 << int_id % 32;
+            let mask = 1 << (int_id % 32);
             if is_pend {
                 self.regs().ISPENDR[reg_idx].set(mask);
             } else {
@@ -273,7 +285,7 @@ impl GicDistributor {
     /// Set interrupt state to active or not.
     pub fn set_active(&self, int_id: usize, is_active: bool) {
         let reg_idx = int_id / 32;
-        let mask = 1 << int_id % 32;
+        let mask = 1 << (int_id % 32);
 
         if is_active {
             self.regs().ISACTIVER[reg_idx].set(mask);
@@ -291,7 +303,7 @@ impl GicDistributor {
     /// Get interrupt state. Depend on its active state and pending state.
     pub fn get_state(&self, int_id: usize) -> usize {
         let reg_idx = int_id / 32;
-        let mask = 1 << int_id % 32;
+        let mask = 1 << (int_id % 32);
 
         let pend = if (self.regs().ISPENDR[reg_idx].get() & mask) != 0 {
             0b01
@@ -303,7 +315,7 @@ impl GicDistributor {
         } else {
             0b00
         };
-        return pend | active;
+        pend | active
     }
 
     /// Provides information about the configuration of this Redistributor.
