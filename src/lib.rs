@@ -9,7 +9,7 @@ mod regs;
 
 mod gic_v2;
 
-pub use gic_v2::{GicCpuInterface, GicDistributor};
+pub use gic_v2::{GicCpuInterface, GicDistributor, GicHypervisorInterface};
 
 /// Interrupt ID 0-15 are used for SGIs (Software-generated interrupt).
 ///
@@ -54,6 +54,12 @@ pub const GICC_CTLR_EOIMODENS_BIT: u32 = 1 << 9;
 /// * 0: Disable signaling of Group 0 interrupts.
 /// * 1: Enable signaling of Group 0 interrupts.
 const GICD_CTLR_EN_BIT: u32 = 0x1;
+
+/// The number of registers in the GIC (Generic Interrupt Controller) register list.
+///
+/// This constant represents the total count of registers available in the GIC's register list,
+/// which is used for managing and configuring interrupt handling in ARM-based systems.
+const GIC_LIST_REGS_NUM: usize = 64;
 
 /// Interrupt trigger mode.
 pub enum TriggerMode {

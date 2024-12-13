@@ -10,7 +10,9 @@ use tock_registers::registers::{ReadOnly, ReadWrite, WriteOnly};
 
 use crate::GIC_CONFIG_BITS;
 use crate::SGI_RANGE;
-use crate::{TriggerMode, GICC_CTLR_EN_BIT, GICD_CTLR_EN_BIT, GIC_MAX_IRQ, SPI_RANGE};
+use crate::{
+    TriggerMode, GICC_CTLR_EN_BIT, GICD_CTLR_EN_BIT, GIC_LIST_REGS_NUM, GIC_MAX_IRQ, SPI_RANGE,
+};
 
 #[cfg(feature = "el2")]
 use crate::GICC_CTLR_EOIMODENS_BIT;
@@ -89,6 +91,36 @@ register_structs! {
     }
 }
 
+register_structs! {
+    /// GIC Hypervisor Interface registers.
+    #[allow(non_snake_case)]
+    GicHypervisorInterfaceRegs {
+        /// Hypervisor Control Register.
+        (0x0000 => HCR: ReadWrite<u32>),
+        /// VGIC Type Register.
+        (0x0004 => VTR: ReadOnly<u32>),
+        /// Virtual Machine Control Register.
+        (0x0008 => VMCR: ReadWrite<u32>),
+        (0x000c => reserve0),
+        /// Maintenance Interrupt Control Register.
+        (0x0010 => MISR: ReadOnly<u32>),
+        (0x0014 => reserve1),
+        /// End of Interrupt Status Register.
+        (0x0020 => EISR: [ReadOnly<u32>; GIC_LIST_REGS_NUM / 32]),
+        (0x0028 => reserve2),
+        /// End of Interrupt Clear Register.
+        (0x0030 => ELRSR: [ReadOnly<u32>; GIC_LIST_REGS_NUM / 32]),
+        (0x0038 => reserve3),
+        /// Active Priorities Register
+        (0x00f0 => APR: ReadWrite<u32>),
+        (0x00f4 => reserve4),
+        /// List Registers.
+        (0x0100 => LR: [ReadWrite<u32>; GIC_LIST_REGS_NUM]),
+        (0x0200 => reserve5),
+        (0x1000 => @END),
+    }
+}
+
 /// The GIC distributor.
 ///
 /// The Distributor block performs interrupt prioritization and distribution
@@ -129,11 +161,27 @@ pub struct GicCpuInterface {
     base: NonNull<GicCpuInterfaceRegs>,
 }
 
+/// The GIC Hypervisor Interface.
+/// GIC (Generic Interrupt Controller) Hypervisor Interface.
+///
+/// This structure represents the hypervisor interface of a GICv2 interrupt controller.
+/// It provides access to the GIC hypervisor interface registers through a non-null pointer.
+///
+/// # Safety
+///
+/// The base pointer must point to valid GIC hypervisor interface registers mapped in memory.
+pub struct GicHypervisorInterface {
+    base: NonNull<GicHypervisorInterfaceRegs>,
+}
+
 unsafe impl Send for GicDistributor {}
 unsafe impl Sync for GicDistributor {}
 
 unsafe impl Send for GicCpuInterface {}
 unsafe impl Sync for GicCpuInterface {}
+
+unsafe impl Send for GicHypervisorInterface {}
+unsafe impl Sync for GicHypervisorInterface {}
 
 impl GicDistributor {
     /// Construct a new GIC distributor instance from the base address.
@@ -475,5 +523,128 @@ impl GicCpuInterface {
         }
         // unmask interrupts at all priority levels
         self.regs().PMR.set(u32::MAX);
+    }
+}
+
+/// GicHypervisorInterface provides an interface to interact with the GIC (Generic Interrupt Controller)
+/// in a hypervisor context. It allows reading and writing to various GIC registers.
+impl GicHypervisorInterface {
+    /// Construct a new GIC Hypervisor interface instance from the base address.
+    ///
+    /// # Arguments
+    ///
+    /// * `base` - A mutable pointer to the base address of the GIC registers.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `GicHypervisorInterface`.
+    pub const fn new(base: *mut u8) -> Self {
+        Self {
+            base: NonNull::new(base).unwrap().cast(),
+        }
+    }
+
+    /// Get a reference to the GIC Hypervisor Interface Registers.
+    ///
+    /// # Safety
+    ///
+    /// This function dereferences a raw pointer, so it is marked as unsafe.
+    const fn regs(&self) -> &GicHypervisorInterfaceRegs {
+        unsafe { self.base.as_ref() }
+    }
+
+    /// Get the value of the HCR (Hypervisor Control Register).
+    ///
+    /// # Returns
+    ///
+    /// The current value of the HCR register.
+    pub fn get_hcr(&self) -> u32 {
+        self.regs().HCR.get()
+    }
+
+    /// Set the value of the HCR (Hypervisor Control Register).
+    ///
+    /// # Arguments
+    ///
+    /// * `hcr` - The value to set the HCR register to.
+    pub fn set_hcr(&self, hcr: u32) {
+        self.regs().HCR.set(hcr);
+    }
+
+    /// Get the value of the ELRSR (Empty List Register Status Register) at the specified index.
+    ///
+    /// # Arguments
+    ///
+    /// * `idx` - The index of the ELRSR register to read.
+    ///
+    /// # Returns
+    ///
+    /// The current value of the specified ELRSR register.
+    pub fn elrsr(&self, idx: usize) -> u32 {
+        self.regs().ELRSR[idx].get()
+    }
+
+    /// Get the value of the EISR (Empty Interrupt Status Register) at the specified index.
+    ///
+    /// # Arguments
+    ///
+    /// * `idx` - The index of the EISR register to read.
+    ///
+    /// # Returns
+    ///
+    /// The current value of the specified EISR register.
+    pub fn eisr(&self, idx: usize) {
+        self.regs().EISR[idx].get();
+    }
+
+    /// Get the value of the MISR (Maintenance Interrupt Status Register).
+    ///
+    /// # Returns
+    ///
+    /// The current value of the MISR register.
+    pub fn misr(&self) -> u32 {
+        self.regs().MISR.get()
+    }
+
+    /// Get the value of the APR (Active Priority Register).
+    ///
+    /// # Returns
+    ///
+    /// The current value of the APR register.
+    pub fn apr(&self) -> u32 {
+        self.regs().APR.get()
+    }
+
+    /// Get the value of the LR (List Register) at the specified index.
+    ///
+    /// # Arguments
+    ///
+    /// * `idx` - The index of the LR register to read.
+    ///
+    /// # Returns
+    ///
+    /// The current value of the specified LR register.
+    pub fn get_lr(&self, idx: usize) -> u32 {
+        self.regs().LR[idx].get()
+    }
+
+    /// Set the value of the LR (List Register) at the specified index.
+    ///
+    /// # Arguments
+    ///
+    /// * `idx` - The index of the LR register to write.
+    /// * `lr` - The value to set the LR register to.
+    pub fn set_lr(&self, idx: usize, lr: u32) {
+        self.regs().LR[idx].set(lr);
+    }
+
+    /// Get the value of the VTR (Virtualization Translation Register).
+    ///
+    /// # Returns
+    ///
+    /// The number of List Registers supported by the GIC, derived from the VTR register.
+    pub fn get_vtr(&self) -> u32 {
+        let vtr: u32 = self.regs().VTR.get();
+        (vtr & 0b11111) + 1
     }
 }
