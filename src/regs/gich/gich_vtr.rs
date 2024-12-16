@@ -15,7 +15,6 @@
 //!
 //! GICH_VTR is a 32-bit register.
 
-use tock_registers::fields::FieldValue;
 use tock_registers::register_bitfields;
 use tock_registers::registers::ReadOnly;
 

@@ -1,5 +1,5 @@
-//! List Registers, GICH_LR<n>, n = 0 - 15
-//! The GICH_LR<n> characteristics are:
+//! List Registers, ``GICH_LR<n>``, n = 0 - 15
+//! The `GICH_LR<n>` characteristics are:
 //!
 //! ## Purpose
 //!
@@ -7,7 +7,7 @@
 //!
 //! ## Configuration
 //!
-//! This register is present only when FEAT_GICv3_LEGACY is implemented and EL2 is implemented. Otherwise, direct accesses to GICH_LR<n> are RES0.
+//! This register is present only when FEAT_GICv3_LEGACY is implemented and EL2 is implemented. Otherwise, direct accesses to `GICH_LR<n>` are RES0.
 //!
 //! This register is available when the GIC implementation supports interrupt virtualization.
 //!
@@ -15,7 +15,7 @@
 //!
 //! ## Attributes
 //!
-//! GICH_LR<n> is a 32-bit register.
+//! `GICH_LR<n>` is a 32-bit register.
 
 use tock_registers::register_bitfields;
 use tock_registers::registers::ReadWrite;

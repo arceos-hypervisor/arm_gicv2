@@ -1,5 +1,5 @@
-//! Active Priorities Registers, GICH_APR<n>, n = 0 - 3
-//! The GICH_APR<n> characteristics are:
+//! Active Priorities Registers, `GICH_APR<n>`, n = 0 - 3
+//! The `GICH_APR<n>` characteristics are:
 //!
 //! ## Purpose
 //!
@@ -7,11 +7,11 @@
 //!
 //! ## Configuration
 //!
-//! This register is present only when FEAT_GICv3_LEGACY is implemented and EL2 is implemented. Otherwise, direct accesses to GICH_APR<n> are RES0.
+//! This register is present only when FEAT_GICv3_LEGACY is implemented and EL2 is implemented. Otherwise, direct accesses to `GICH_APR<n>` are RES0.
 //!
 //! This register is available when the GIC implementation supports interrupt virtualization.
 //!
-//! The number of registers required depends on how many bits are implemented in GICH_LR<n>.Priority:
+//! The number of registers required depends on how many bits are implemented in `GICH_LR<n>.Priority`:
 //! - When 5 priority bits are implemented, 1 register is required (GICH_APR0).
 //! - When 6 priority bits are implemented, 2 registers are required (GICH_APR0, GICH_APR1).
 //! - When 7 priority bits are implemented, 4 registers are required (GICH_APR0, GICH_APR1, GICH_APR2, GICH_APR3).
@@ -19,7 +19,7 @@
 //!
 //! ## Attributes
 //!
-//! GICH_APR<n> is a 32-bit register.
+//! `GICH_APR<n>` is a 32-bit register.
 
 use tock_registers::register_bitfields;
 use tock_registers::registers::ReadWrite;
