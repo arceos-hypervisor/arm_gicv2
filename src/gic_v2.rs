@@ -4,7 +4,7 @@
 
 use core::ptr::NonNull;
 
-use tock_registers::interfaces::{Readable, Writeable};
+use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 use tock_registers::register_structs;
 use tock_registers::registers::{ReadOnly, ReadWrite, WriteOnly};
 
@@ -17,7 +17,8 @@ use crate::{
 #[cfg(feature = "el2")]
 use crate::GICC_CTLR_EOIMODENS_BIT;
 
-use crate::regs::{GicdSgirReg, GICD_SGIR};
+use crate::gich::GICH;
+use crate::regs::*;
 
 register_structs! {
     /// GIC Distributor registers.
@@ -96,26 +97,26 @@ register_structs! {
     #[allow(non_snake_case)]
     GicHypervisorInterfaceRegs {
         /// Hypervisor Control Register.
-        (0x0000 => HCR: ReadWrite<u32>),
+        (0x0000 => HCR: GichHcrReg),
         /// VGIC Type Register.
-        (0x0004 => VTR: ReadOnly<u32>),
+        (0x0004 => VTR: GichVtrReg),
         /// Virtual Machine Control Register.
-        (0x0008 => VMCR: ReadWrite<u32>),
+        (0x0008 => VMCR: GichVmcrReg),
         (0x000c => reserve0),
         /// Maintenance Interrupt Control Register.
-        (0x0010 => MISR: ReadOnly<u32>),
+        (0x0010 => MISR: GichMisrReg),
         (0x0014 => reserve1),
         /// End of Interrupt Status Register.
-        (0x0020 => EISR: [ReadOnly<u32>; GIC_LIST_REGS_NUM / 32]),
+        (0x0020 => EISR: [GichEisrReg; GIC_LIST_REGS_NUM / 32]),
         (0x0028 => reserve2),
         /// End of Interrupt Clear Register.
-        (0x0030 => ELRSR: [ReadOnly<u32>; GIC_LIST_REGS_NUM / 32]),
+        (0x0030 => ELRSR: [GichElrsrReg; GIC_LIST_REGS_NUM / 32]),
         (0x0038 => reserve3),
         /// Active Priorities Register
-        (0x00f0 => APR: ReadWrite<u32>),
+        (0x00f0 => APR: GichAprReg),
         (0x00f4 => reserve4),
         /// List Registers.
-        (0x0100 => LR: [ReadWrite<u32>; GIC_LIST_REGS_NUM]),
+        (0x0100 => LR: [GichLrReg; GIC_LIST_REGS_NUM]),
         (0x0200 => reserve5),
         (0x1000 => @END),
     }
