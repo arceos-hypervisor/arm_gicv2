@@ -24,72 +24,7 @@ register_bitfields! {u32,
         Reserved31_16 OFFSET(16) NUMBITS(16) [],
         /// [15:0] Status<n>
         /// EOI maintenance interrupt status for List register <n>.
-        // Status [
-            Status15 OFFSET(15) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status14 OFFSET(14) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status13 OFFSET(13) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status12 OFFSET(12) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status11 OFFSET(11) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status10 OFFSET(10) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status9 OFFSET(9) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status8 OFFSET(8) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status7 OFFSET(7) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status6 OFFSET(6) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status5 OFFSET(5) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status4 OFFSET(4) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status3 OFFSET(3) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status2 OFFSET(2) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status1 OFFSET(1) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ],
-            Status0 OFFSET(0) NUMBITS(1) [
-                NoEOI = 0,
-                EOIAsserted = 1
-            ]
-        // ]
+        Status OFFSET(0) NUMBITS(16) [],
     ]
 }
 

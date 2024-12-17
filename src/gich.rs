@@ -1,8 +1,10 @@
-/// GIC Hypervisor Interface
-///
-/// This module provides an interface to interact with the Generic Interrupt Controller (GIC)
-/// in a hypervisor context. It allows the hypervisor to manage virtual interrupts for virtual
-/// machines by accessing and manipulating GIC hypervisor interface registers.
+//! GIC Hypervisor Interface
+//!
+//! This module provides an interface to interact with the Generic Interrupt Controller (GIC)
+//! in a hypervisor context. It allows the hypervisor to manage virtual interrupts for virtual
+//! machines by accessing and manipulating GIC hypervisor interface registers.
+//!
+
 use core::ptr::NonNull;
 
 use tock_registers::interfaces::{Readable, Writeable};
@@ -21,22 +23,22 @@ register_structs! {
         (0x0004 => VTR: GichVtrReg),
         /// Virtual Machine Control Register.
         (0x0008 => VMCR: GichVmcrReg),
-        (0x000c => reserve0),
+        (0x000c => _reserved0: [u32; 1]),
         /// Maintenance Interrupt Control Register.
         (0x0010 => MISR: GichMisrReg),
-        (0x0014 => reserve1),
+        (0x0014 => _reserved1: [u32; 1]),
         /// End of Interrupt Status Register.
         (0x0020 => EISR: [GichEisrReg; GIC_LIST_REGS_NUM / 32]),
-        (0x0028 => reserve2),
+        (0x0028 => _reserved2: [u32; 1]),
         /// End of Interrupt Clear Register.
         (0x0030 => ELRSR: [GichElrsrReg; GIC_LIST_REGS_NUM / 32]),
-        (0x0038 => reserve3),
+        (0x0038 => _reserved3: [u32; 1]),
         /// Active Priorities Register
         (0x00f0 => APR: GichAprReg),
-        (0x00f4 => reserve4),
+        (0x00f4 => _reserved4: [u32; 1]),
         /// List Registers.
         (0x0100 => LR: [GichLrReg; GIC_LIST_REGS_NUM]),
-        (0x0200 => reserve5),
+        (0x0200 => _reserved5: [u32; 256]),
         (0x1000 => @END),
     }
 }
