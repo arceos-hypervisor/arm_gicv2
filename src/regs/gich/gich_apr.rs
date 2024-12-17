@@ -15,7 +15,7 @@
 //! - When 5 priority bits are implemented, 1 register is required (GICH_APR0).
 //! - When 6 priority bits are implemented, 2 registers are required (GICH_APR0, GICH_APR1).
 //! - When 7 priority bits are implemented, 4 registers are required (GICH_APR0, GICH_APR1, GICH_APR2, GICH_APR3).
-//! Unimplemented registers are RAZ/WI.
+//!   Unimplemented registers are RAZ/WI.
 //!
 //! ## Attributes
 //!

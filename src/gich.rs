@@ -23,22 +23,22 @@ register_structs! {
         (0x0004 => VTR: GichVtrReg),
         /// Virtual Machine Control Register.
         (0x0008 => VMCR: GichVmcrReg),
-        (0x000c => _reserved0: [u32; 1]),
+        (0x000c => _reserve0),
         /// Maintenance Interrupt Control Register.
         (0x0010 => MISR: GichMisrReg),
-        (0x0014 => _reserved1: [u32; 1]),
+        (0x0014 => _reserve1),
         /// End of Interrupt Status Register.
         (0x0020 => EISR: [GichEisrReg; GIC_LIST_REGS_NUM / 32]),
-        (0x0028 => _reserved2: [u32; 1]),
+        (0x0028 => _reserve2),
         /// End of Interrupt Clear Register.
         (0x0030 => ELRSR: [GichElrsrReg; GIC_LIST_REGS_NUM / 32]),
-        (0x0038 => _reserved3: [u32; 1]),
+        (0x0038 => _reserve3),
         /// Active Priorities Register
         (0x00f0 => APR: GichAprReg),
-        (0x00f4 => _reserved4: [u32; 1]),
+        (0x00f4 => _reserve4),
         /// List Registers.
         (0x0100 => LR: [GichLrReg; GIC_LIST_REGS_NUM]),
-        (0x0200 => _reserved5: [u32; 256]),
+        (0x0200 => _reserve5),
         (0x1000 => @END),
     }
 }
