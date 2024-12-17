@@ -15,7 +15,7 @@ use crate::{TriggerMode, GICC_CTLR_EN_BIT, GICD_CTLR_EN_BIT, GIC_MAX_IRQ, SPI_RA
 #[cfg(feature = "el2")]
 use crate::GICC_CTLR_EOIMODENS_BIT;
 
-use crate::regs::{GicdSgirReg, GICD_SGIR};
+use crate::regs::*;
 
 register_structs! {
     /// GIC Distributor registers.

@@ -16,3 +16,4 @@ tock-registers = "0.8"
 
 [features]
 el2 = []
+hv = []
