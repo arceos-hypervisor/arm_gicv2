@@ -13,6 +13,8 @@ use tock_registers::register_structs;
 use crate::regs::gich::*;
 use crate::GIC_LIST_REGS_NUM;
 
+// use log::info;
+
 register_structs! {
     /// GIC Hypervisor Interface registers.
     #[allow(non_snake_case)]
